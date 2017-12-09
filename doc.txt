@@ -229,7 +229,7 @@
                         filename: 'index.html',
                     }),
 
-
+        babel 待后续
 
 
  
