@@ -1,0 +1,243 @@
+
+1. 基本使用
+
+    使用  npm install webpack -D  
+
+    -D 相当于 --save-dev 表示是开发依赖  对应package.json 的 devDependencies 字段
+
+    使用 webpack 源文件路径+文件名 打包后文件存放路径+文件名 就可以实现 webpack 打包
+
+2.webpack.config.js 配置
+
+    1. entry
+
+        入口文件的配置有单入口文件和多入口文件两种
+
+        单入口文件的配置 --->  entry:"xxx.js" or  entry:["xxx.js","xxx.js"] ---> 将互相不依赖多个文件打包成一个文件，eg：["xxx.js","babel-pollify.js"]
+
+        多入口文件配置 ----> entry：{app:"index.js",bundle:"2.js"};
+
+    2. output
+
+        出口文件的配置是一个对象至少需要出口路径和文件名
+
+        output.path ---> 出口文件存放路径，建议用相对路径，也可使用 path.resolve( __dirname,"xxxx" )
+
+            tip: path 是 node 的语法，使用前需要引入 const path = require("path"), __dirname 也是 node 语法，表示的是当前命令行显示的路径
+        
+        output.filename ---> 输出的文件名，由于入口文件有多个和单个，所以出口文件名也要与之对应
+
+            单出口文件 output.filename = "xxxx.js";
+
+            多出口文件 output.filename = "[name].js";    
+            
+                tip：这里的 name 指的是多入口文件对象中的键
+
+            也可以在文件名后加上 hash 值，以减少文件缓存造成的修改文件无效果 eg: "[name]-[hash].js" or "[id]-bundle.js" id指的是每个文件唯一标识符，打包时自动分配
+        
+        output.publicPath ---> 配置线上的 cdn 的前缀
+
+            eg：线上的文件地址是："https://www.aa.com/bb.js"  这时的 publicPath 就是 "https://www.aa.com/"  建议线上打包时配置，开发时关闭
+    
+    3.devServer  需要安装 webpck-dev-server
+
+        开发服务器
+
+        contentBase:  服务器的基本路径，一般为绝对路径，如果不配置，默认是项目的根目录
+
+            tip：一般与 output.path 是同一路径
+
+        host：服务的主机名，一般为 localhost
+
+        port：服务的端口号
+
+        historyApiFallback：如果输入的地址不存在，直接跳转 404 页面,而 404 页面是需要单独配置的，一般配置为 true，当输入的路径不存在时，直接跳转 index.html 
+
+            配置如下:
+                historyApiFallback:{
+                    rewrites:[
+                        {from:/./,to:'/404.html'}  一般不会这样子配置，直接写 true 返回主页就好
+                    ]
+                }
+        
+        overlay：这个选项是当编译出错时，直接在页面中显示错误，而不是仅仅在命令行中，true/false  这个功能相当实用，你就不用盯着命令行找错误
+
+        stats：这个是控制 shell 中输出内容的 eg："errors-only" 只显示错误信息，不显示编译信息   color:ture 文字彩色显示
+
+        quiet: false/true 控制台中不输出打包的信息
+
+        compress：true/false(默认) 是否启动服务器压缩 当它被设置为true的时候对所有的服务器资源采用gzip压缩
+
+            优点：对JS，CSS资源的压缩率很高，可以极大得提高文件传输的速率，从而提升web性能
+
+            缺点：服务端要对文件进行压缩，而客户端要进行解压，增加了两边的负载
+
+        inline 和 hot
+
+            webpack-dev-server 有自己的自动刷新和热模块更新的机制
+
+            1. iframe mode（默认模式，无需配置）
+
+                页面被嵌入在一个iframe里面，并且在模块变化的时候重载页面 这里的重载页面指的是重新加载页面
+
+            2. inline mode（需要配置）
+
+                首先将 devServer.hot 和 devServer.inline 都配置为 true 
+
+                然后，在入口文件中添加 'webpack-dev-server/client?http://localhost:你设置的端口号/' ，这段代码将会打包进入口文件里，相当于一个小型的客户端  webpack 3 中不需要这一步
+
+                最后，在插件中引入  new webpack.HotModuleRepiacementPlugin()
+
+                配置完成以后，当你保存修改以后，就不是重载，而是只对修改的部分进行增删改，也就是局部刷新
+        
+        porxy：启动反向代理
+
+            proxy:{  
+                "/text/":{ // 可以有多个
+                    target:"http://localhost:8080",  // 目标站点
+                    changeOrigin: true,    // 是否启动虚拟站点
+                    pathRewrite: {  // 重写路径
+                        '^/api/old-path' : '/api/new-path',     // rewrite path
+                        '^/api/remove/path' : '/path'           // remove base path
+                    }
+                }
+            }
+
+    4.externals：配置不需要打包的公共库
+
+        {
+            "react":"React",
+            "react-dom":"ReactDOM"
+        }
+
+        像 react 可以引用 cdn 而不需要再去打包，这是就可以这么配置。这个对象的键是文件引入时的包名，值是你使用 script 引入时暴露的全局引用
+
+    5.resolve：配置模块如何解析
+
+        alias：创建 import 或 require 的别名，来确保模块引入变得更简单
+
+            eg：import AA from "../../../aa/AA"   引入的路径相当繁琐，这时就可以配置
+
+            alias:{
+                "@":"../../aa"   // 引入时 import AA from "@/AA" 
+            }
+
+        extensions:自动解析确定的扩展。默认值为：[".js", ".json"]  你可以根据自己的需要去配置
+
+    6.devtool：辅助调试时使用（需要单独理解） 
+
+        在配置devtool时，webpack给我们提供了四种选项。
+
+            source-map:在一个单独文件中产生一个完整且功能完全的文件。这个文件具有最好的source map,但是它会减慢打包速度；
+
+            cheap-module-source-map:在一个单独的文件中产生一个不带列映射的map，不带列映射提高了打包速度，但是也使得浏览器开发者工具只能对应到具体的行，不能对应到具体的列（符号）,会对调试造成不便。
+            
+            eval-source-map:使用eval打包源文件模块，在同一个文件中生产干净的完整版的sourcemap，但是对打包后输出的JS文件的执行具有性能和安全的隐患。在开发阶段这是一个非常好的选项，在生产阶段则一定要不开启这个选项。
+            
+            cheap-module-eval-source-map:这是在打包文件时最快的生产source map的方法，生产的 Source map 会和打包后的JavaScript文件同行显示，没有影射列，和eval-source-map选项具有相似的缺点。
+            
+            四种打包模式，有上到下打包速度越来越快，不过同时也具有越来越多的负面作用，较快的打包速度的后果就是对执行和调试有一定的影响。
+
+            开发模式中建议使用 source-map 模式，生产时不建议使用 带 eval 的模式，因为可能不产生意料之外的错误，建议使用 cheap-module-source-map
+
+    7.plugins:插件配置，是一个数组
+
+        下面介绍几种常用插件
+
+            1.webpack 自带的插件（无需下载） 但是需要 var webpack = require("webpack");
+
+                webpack.HotModuleReplacementPlugin() // 模块热更新插件（前面提到过）  使用  new webpack.HotModuleReplacementPlugin()
+
+                    这个插件无需配置，直接这样子写进去就可以使用,仅适用于开发环境
+
+                webpack.ProviderPlugins() // 全局注入插件   使用 new webpack.ProviderPlugins({ $:"jquery" })
+
+                    这个是一个优化插件，当你在项目中不使用 jq 时，他是不会打包的，只有使用了，才会打包进文件
+
+                webpack.optimize.CommonsChunkPlugin() // 提取公共库  使用 webpack.optimize.CommonsChunkPlugin({
+                                                                                                                //name对应入口文件中的名字，我们起的是jQuery
+                                                                                                                name:'jquery',
+                                                                                                                //把文件打包到哪里，是一个路径
+                                                                                                                filename:"assets/js/jquery.min.js",
+                                                                                                                //最小打包的文件模块数，这里直接写2就好
+                                                                                                                minChunks:2
+                                                                                                                })
+                    提取公共库，如果没有特殊要求，这个插件可用 externals 代替，然后自己手动引入相应的依赖库文件，因为如果你打包时抽取的是开发时的库文件，将会有多余的报错
+                    或者警告出现，当然，你也可以使用 node 的环境变量，告诉打包时的环境是生产环境,这个需要另外一个插件
+                
+                    webpack.DefinePlugin({  // 配置生产环境还是开发环境
+                        'process.env': {
+                            NODE_ENV: '"production"'
+                        }
+                    })  但是还是建议直接引入官网打包好的库文件，这样子体积小，而且有保证，因为抽出来的库文件打包有插件的代码，会变得很大
+                    
+            2.其他插件
+
+                extract-text-webpack-plugin // 将 css 样式分离
+
+                    使用 var CSSExtract = require("extract-text-webpack-plugin");
+
+                         new CSSExtract("[name].css") // name 可以自定义，也可以用入口文件名
+
+                clean-webpack-plugin  // 每次打包前清空目标文件夹
+
+                    使用 const clearDir = require("clean-webpack-plugin");// 每次打包前清空目标文件夹
+
+                     new clearDir(["dist"])  // dist 就是 output.path
+                
+                copy-webpack-plugin // 将你的静态文件 copy 到目标目录，这个是因为你的静态文件每次会被上个插件清理
+
+                    使用  const copyWebpackPlugin= require("copy-webpack-plugin"); // 拷贝静态资源到指定文件夹，相对的是出口文件存放的文件夹
+
+                    new copyWebpackPlugin([{
+                        from:path.resolve( __dirname,"react" ),
+                        to:'./react'
+                    }]),
+
+                purifycss-webpack // 去除你写了，但是没有用到的 css 代码
+
+                    使用 const purifyCSSWebpack = require("purifycss-webpack"); // 去除多余的 css 插件
+
+                    new purifyCSSWebpack({  // 去除没有用到的css样式
+                        paths:glob.sync( path.resolve( __dirname,"index.html" ) )
+                    }),
+
+                    // paths 是你模板 html 文件的绝对路径，而且这个插件一定是和 extract-text-webpack-plugin 插件一起使用 
+
+                    // glob 是 node 的内置模块，不需要安装，直接使用即可  const glob = require("glob");  // node 自带模块
+
+                glifyjs-webpack-plugin // 压缩 js 文件，不需要安装，webpack 自带模块，直接使用即可
+                
+                    使用 const uglify = require('uglifyjs-webpack-plugin'); // 压缩 js 文件，webpack 集成的有，不用独立安装 
+                         
+                         new uglify(), //生产环境使用，压缩 js 文件
+
+                html-webpack-plugin  // 读取模板 html 插件
+                
+                    使用 const htmlPlugin = require("html-webpack-plugin");
+
+                    new htmlPlugin({
+                        // 模板文件
+                        template:"./index.html",
+                        minify:{ // 压缩 html 文件
+                            removeAttributeQuotes:true
+                        },
+                        hash:true,  // 加入的 css 和 js 文件添加 hash 值
+                        // 要往页面中注入的包
+                        chunks:["react","react-dom","bundle"],
+                        // 生成的页面名称
+                        filename: 'index.html',
+                    }),
+
+
+
+
+ 
+
+
+    
+
+
+
+
+
