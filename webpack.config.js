@@ -105,7 +105,7 @@ module.exports = {
             to:'./react'
         }]),
         new clearDir(["dist"]), // 清空目标文件夹
-        new extractTextPlugin("css/[name].css"), // 单独打包 css 文件  css 前最好不加斜杠
+        new extractTextPlugin("[name].css"), // 单独打包 css 文件  css 前最好不加斜杠
         new purifyCSSWebpack({  // 去除没有用到的css样式
             paths:glob.sync( path.resolve( __dirname,"index.html" ) )
         }),
